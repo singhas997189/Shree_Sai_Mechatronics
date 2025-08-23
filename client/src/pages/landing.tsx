@@ -57,7 +57,7 @@ export default function Landing() {
 
         {/* System Info */}
         <div className="text-center mt-6 text-sm text-steel-gray">
-          <p>© 2024 Shree Sai Mechatronics</p>
+          <p>© 2025 Shree Sai Mechatronics</p>
           <p>Workshop Management System v2.1</p>
         </div>
       </div>
