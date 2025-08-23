@@ -1,0 +1,76 @@
+Module 3: Engineer Dashboard
+FR3.1: Product Access via QR Scan
+
+A prominent "Scan Product QR" button that activates the camera.
+
+Upon scanning a product's QR code, the app displays a detailed view of that product.
+
+Details shown: Company Name, Product Name, Problem Statement, Time for Completion (if set by admin), Reward (if applicable), Schematic Diagrams (as downloadable images/PDFs).
+
+FR3.2: Component Inventory Search
+
+A search bar to look for components (e.g., "Arduino Nano", "10k Ohm Resistor").
+
+Search results must show:
+
+Component Name
+
+Stock Count (Availability)
+
+Clear Image of the component
+
+Datasheet link (as a downloadable file or external link)
+
+Storage Location (Shelf ID)
+
+A "Request" button (e.g., a Plus + icon) for each search result.
+
+FR3.3: Component Request Workflow
+
+Clicking the "Request" button opens a modal.
+
+The modal pre-fills the component name and shows current stock.
+
+The engineer enters the Quantity Needed.
+
+On confirmation, the request is instantly sent to the Inventory Personnel's Request Dashboard.
+
+FR3.4: Task Timeline
+
+A section or page showing all products assigned to or scanned by the engineer.
+
+View should show status (In Progress, Awaiting Parts, Completed).
+
+A timeline for each product showing key events: "Received on [Date]", "Component X requested on [Date]", "Completed on [Date]".
+
+Module 4: Administrator Dashboard
+FR4.1: User Management
+
+CRUD (Create, Read, Update, Deactivate) operations for user accounts.
+
+Form to add a new user: Name, Username, Password, Role (dropdown: Admin, Inventory, Engineer).
+
+Ability to reset user passwords.
+
+FR4.2: Role & Access Management
+
+A clear interface to assign and modify permissions for different roles.
+
+Configurable Permissions: The admin should be able to enable/disable access to certain features (e.g., "Can engineer Y request components?") without code changes.
+
+FR4.3: System Oversight
+
+View analytics: Total products in, products repaired, components used, engineer performance.
+
+Access logs for all data changes.
+
+4. Non-Functional Requirements
+Platform: Responsive Web Application (works on desktop, tablet, and mobile phones).
+
+QR Code Handling: Efficient camera access and scanning using a library like react-qr-reader or html5-qrcode.
+
+Data Storage: A robust database (e.g., PostgreSQL, MySQL). Google Sheets should only be used as a secondary, automated data dump for requests, not the primary database.
+
+Security: All API endpoints and user data must be secure. HTTPS mandatory.
+
+Usability: The UI must be intuitive and designed for use in a workshop environment with large, easily tappable buttons.

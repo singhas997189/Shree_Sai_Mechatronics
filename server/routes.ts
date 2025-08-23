@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import QRCode from "qrcode";
-import { insertProductSchema, insertComponentRequestSchema } from "@shared/schema";
+import { insertProductSchema, insertComponentRequestSchema, insertProductEventSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -273,10 +273,323 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestData = insertComponentRequestSchema.parse(req.body);
       const request = await storage.createComponentRequest({ ...requestData, requestedBy: userId });
       
+      // Create timeline event
+      await storage.createProductEvent({
+        productId: requestData.productId,
+        eventType: "component_requested",
+        description: `Component requested: ${request.id}`,
+        userId,
+      });
+      
       res.json(request);
     } catch (error) {
       console.error("Component request error:", error);
       res.status(400).json({ message: "Failed to create component request" });
+    }
+  });
+
+  // ENGINEER DASHBOARD ROUTES
+  
+  // Search components
+  app.get('/api/engineer/components/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'engineer') {
+        return res.status(403).json({ message: "Engineer access required" });
+      }
+
+      const { query } = req.query;
+      if (!query) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      
+      const components = await storage.searchComponents(query as string);
+      res.json(components);
+    } catch (error) {
+      console.error("Component search error:", error);
+      res.status(500).json({ message: "Failed to search components" });
+    }
+  });
+
+  // Get engineer's assigned products
+  app.get('/api/engineer/products', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'engineer') {
+        return res.status(403).json({ message: "Engineer access required" });
+      }
+
+      const products = await storage.getProductsForEngineer(userId);
+      res.json(products);
+    } catch (error) {
+      console.error("Engineer products fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch assigned products" });
+    }
+  });
+
+  // Get product timeline
+  app.get('/api/engineer/products/:productId/timeline', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'engineer') {
+        return res.status(403).json({ message: "Engineer access required" });
+      }
+
+      const { productId } = req.params;
+      const timeline = await storage.getProductTimeline(productId);
+      res.json(timeline);
+    } catch (error) {
+      console.error("Product timeline fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch product timeline" });
+    }
+  });
+
+  // Update product status
+  app.patch('/api/engineer/products/:productId/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'engineer') {
+        return res.status(403).json({ message: "Engineer access required" });
+      }
+
+      const { productId } = req.params;
+      const { status } = req.body;
+      
+      if (!['pending', 'in_progress', 'completed'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const product = await storage.updateProductStatus(productId, status);
+      res.json(product);
+    } catch (error) {
+      console.error("Product status update error:", error);
+      res.status(400).json({ message: "Failed to update product status" });
+    }
+  });
+
+  // Get engineer's component requests
+  app.get('/api/engineer/component-requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'engineer') {
+        return res.status(403).json({ message: "Engineer access required" });
+      }
+
+      const requests = await storage.getComponentRequestsForEngineer(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Engineer component requests fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch component requests" });
+    }
+  });
+
+  // ADMIN DASHBOARD ROUTES
+  
+  // Get all users
+  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Users fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Create new user
+  app.post('/api/admin/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const userSchema = z.object({
+        email: z.string().email(),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        role: z.enum(["inventory", "engineer", "admin"]),
+      });
+
+      const userData = userSchema.parse(req.body);
+      const newUser = await storage.upsertUser(userData);
+      
+      await storage.createActivityLog({
+        userId,
+        action: "create_user",
+        entityType: "user",
+        entityId: newUser.id,
+        description: `Created new user: ${newUser.email}`,
+      });
+      
+      res.json(newUser);
+    } catch (error) {
+      console.error("User creation error:", error);
+      res.status(400).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Deactivate user
+  app.delete('/api/admin/users/:targetUserId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { targetUserId } = req.params;
+      const success = await storage.deactivateUser(targetUserId);
+      
+      if (success) {
+        await storage.createActivityLog({
+          userId,
+          action: "deactivate_user",
+          entityType: "user",
+          entityId: targetUserId,
+          description: `Deactivated user: ${targetUserId}`,
+        });
+      }
+      
+      res.json({ success });
+    } catch (error) {
+      console.error("User deactivation error:", error);
+      res.status(400).json({ message: "Failed to deactivate user" });
+    }
+  });
+
+  // Get system analytics
+  app.get('/api/admin/analytics', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const analytics = await storage.getSystemAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Analytics fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // Get recent activity logs
+  app.get('/api/admin/activity', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { limit } = req.query;
+      const activity = await storage.getRecentActivity(limit ? parseInt(limit as string) : 50);
+      res.json(activity);
+    } catch (error) {
+      console.error("Activity logs fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch activity logs" });
+    }
+  });
+
+  // Get role permissions
+  app.get('/api/admin/roles/:role/permissions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { role } = req.params;
+      const permissions = await storage.getRolePermissions(role);
+      res.json(permissions);
+    } catch (error) {
+      console.error("Role permissions fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch role permissions" });
+    }
+  });
+
+  // Update role permissions
+  app.put('/api/admin/roles/:role/permissions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { role } = req.params;
+      const { permission, enabled } = req.body;
+      
+      const updatedPermission = await storage.updateRolePermission(role, permission, enabled);
+      
+      await storage.createActivityLog({
+        userId,
+        action: "update_permission",
+        entityType: "role",
+        entityId: role,
+        description: `Updated permission ${permission} for ${role} to ${enabled}`,
+      });
+      
+      res.json(updatedPermission);
+    } catch (error) {
+      console.error("Role permission update error:", error);
+      res.status(400).json({ message: "Failed to update role permission" });
+    }
+  });
+
+  // Assign product to engineer
+  app.post('/api/admin/assign-product', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { productId, engineerId, estimatedCompletionTime, reward } = req.body;
+      
+      const product = await storage.assignProductToEngineer(productId, engineerId);
+      
+      await storage.createActivityLog({
+        userId,
+        action: "assign_product",
+        entityType: "product",
+        entityId: productId,
+        description: `Assigned product ${product.uniqueRepairId} to engineer ${engineerId}`,
+      });
+      
+      res.json(product);
+    } catch (error) {
+      console.error("Product assignment error:", error);
+      res.status(400).json({ message: "Failed to assign product" });
     }
   });
 

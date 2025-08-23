@@ -6,6 +6,9 @@ import {
   components,
   componentRequests,
   fulfillmentLogs,
+  productEvents,
+  rolePermissions,
+  activityLogs,
   type User,
   type UpsertUser,
   type QRToken,
@@ -17,9 +20,13 @@ import {
   type ComponentRequest,
   type InsertComponentRequest,
   type FulfillmentLog,
+  type ProductEvent,
+  type InsertProductEvent,
+  type RolePermission,
+  type ActivityLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gt, isNull } from "drizzle-orm";
+import { eq, and, gt, isNull, like, or, desc, count } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 // Interface for storage operations
@@ -33,11 +40,20 @@ export interface IStorage {
   validateAndUseQRToken(token: string): Promise<User | undefined>;
   generateQRTokenForUser(userId: string): Promise<string>;
   
+  // User management (Admin)
+  getAllUsers(): Promise<User[]>;
+  getUsersByRole(role: string): Promise<User[]>;
+  updateUserRole(userId: string, role: string): Promise<User>;
+  deactivateUser(userId: string): Promise<boolean>;
+  
   // Inventory operations
   createProduct(product: InsertProduct & { createdBy: string }): Promise<Product>;
   getProduct(id: string): Promise<Product | undefined>;
   getProductByQR(qrCode: string): Promise<Product | undefined>;
   updateProductLocation(productId: string, shelfLocationId: string): Promise<Product>;
+  assignProductToEngineer(productId: string, engineerId: string): Promise<Product>;
+  updateProductStatus(productId: string, status: string): Promise<Product>;
+  getProductsForEngineer(engineerId: string): Promise<Product[]>;
   
   // Shelf location operations
   getShelfLocationByQR(qrCode: string): Promise<ShelfLocation | undefined>;
@@ -46,14 +62,29 @@ export interface IStorage {
   // Component operations
   getComponentByQR(qrCode: string): Promise<Component | undefined>;
   getComponent(id: string): Promise<Component | undefined>;
+  searchComponents(query: string): Promise<Component[]>;
   
   // Component request operations
   createComponentRequest(request: InsertComponentRequest & { requestedBy: string }): Promise<ComponentRequest>;
   getPendingComponentRequests(): Promise<(ComponentRequest & { product: Product; component: Component })[]>;
   fulfillComponentRequest(requestId: string, fulfilledBy: string): Promise<ComponentRequest>;
+  getComponentRequestsForEngineer(engineerId: string): Promise<(ComponentRequest & { product: Product; component: Component })[]>;
   
   // Fulfillment logging
   createFulfillmentLog(log: { productId: string; componentId: string; requestId: string; quantity: number; inventoryPersonId: string }): Promise<FulfillmentLog>;
+  
+  // Product events and timeline
+  createProductEvent(event: InsertProductEvent): Promise<ProductEvent>;
+  getProductTimeline(productId: string): Promise<ProductEvent[]>;
+  
+  // Role permissions
+  getRolePermissions(role: string): Promise<RolePermission[]>;
+  updateRolePermission(role: string, permission: string, enabled: boolean): Promise<RolePermission>;
+  
+  // Activity logs and analytics
+  createActivityLog(log: { userId?: string; action: string; entityType?: string; entityId?: string; description?: string; ipAddress?: string; userAgent?: string }): Promise<ActivityLog>;
+  getRecentActivity(limit?: number): Promise<ActivityLog[]>;
+  getSystemAnalytics(): Promise<{ totalProducts: number; totalUsers: number; completedRepairs: number; pendingRequests: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -236,6 +267,175 @@ export class DatabaseStorage implements IStorage {
       .values(logData)
       .returning();
     return log;
+  }
+
+  // User management (Admin)
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getUsersByRole(role: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, role as any));
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ role: role as any, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async deactivateUser(userId: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Extended product operations
+  async assignProductToEngineer(productId: string, engineerId: string): Promise<Product> {
+    const [product] = await db
+      .update(products)
+      .set({ assignedEngineerId: engineerId, status: "in_progress", updatedAt: new Date() })
+      .where(eq(products.id, productId))
+      .returning();
+    
+    // Create timeline event
+    await this.createProductEvent({
+      productId,
+      eventType: "assigned",
+      description: `Product assigned to engineer`,
+      userId: engineerId,
+    });
+    
+    return product;
+  }
+
+  async updateProductStatus(productId: string, status: string): Promise<Product> {
+    const [product] = await db
+      .update(products)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(eq(products.id, productId))
+      .returning();
+    
+    // Create timeline event
+    await this.createProductEvent({
+      productId,
+      eventType: status as any,
+      description: `Product status updated to ${status}`,
+    });
+    
+    return product;
+  }
+
+  async getProductsForEngineer(engineerId: string): Promise<Product[]> {
+    return await db
+      .select()
+      .from(products)
+      .where(eq(products.assignedEngineerId, engineerId))
+      .orderBy(desc(products.updatedAt));
+  }
+
+  // Component search
+  async searchComponents(query: string): Promise<Component[]> {
+    return await db
+      .select()
+      .from(components)
+      .where(
+        or(
+          like(components.componentName, `%${query}%`),
+          like(components.qrCode, `%${query}%`)
+        )
+      )
+      .orderBy(desc(components.stockQuantity));
+  }
+
+  // Extended component request operations
+  async getComponentRequestsForEngineer(engineerId: string): Promise<(ComponentRequest & { product: Product; component: Component })[]> {
+    const requests = await db
+      .select({
+        request: componentRequests,
+        product: products,
+        component: components,
+      })
+      .from(componentRequests)
+      .innerJoin(products, eq(componentRequests.productId, products.id))
+      .innerJoin(components, eq(componentRequests.componentId, components.id))
+      .where(eq(componentRequests.requestedBy, engineerId))
+      .orderBy(desc(componentRequests.createdAt));
+    
+    return requests.map(r => ({ ...r.request, product: r.product, component: r.component }));
+  }
+
+  // Product events and timeline
+  async createProductEvent(eventData: InsertProductEvent): Promise<ProductEvent> {
+    const [event] = await db
+      .insert(productEvents)
+      .values(eventData)
+      .returning();
+    return event;
+  }
+
+  async getProductTimeline(productId: string): Promise<ProductEvent[]> {
+    return await db
+      .select()
+      .from(productEvents)
+      .where(eq(productEvents.productId, productId))
+      .orderBy(desc(productEvents.createdAt));
+  }
+
+  // Role permissions
+  async getRolePermissions(role: string): Promise<RolePermission[]> {
+    return await db
+      .select()
+      .from(rolePermissions)
+      .where(eq(rolePermissions.role, role as any));
+  }
+
+  async updateRolePermission(role: string, permission: string, enabled: boolean): Promise<RolePermission> {
+    const [rolePermission] = await db
+      .insert(rolePermissions)
+      .values({ role: role as any, permission, enabled })
+      .onConflictDoUpdate({
+        target: [rolePermissions.role, rolePermissions.permission],
+        set: { enabled },
+      })
+      .returning();
+    return rolePermission;
+  }
+
+  // Activity logs and analytics
+  async createActivityLog(logData: { userId?: string; action: string; entityType?: string; entityId?: string; description?: string; ipAddress?: string; userAgent?: string }): Promise<ActivityLog> {
+    const [log] = await db
+      .insert(activityLogs)
+      .values(logData)
+      .returning();
+    return log;
+  }
+
+  async getRecentActivity(limit: number = 50): Promise<ActivityLog[]> {
+    return await db
+      .select()
+      .from(activityLogs)
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getSystemAnalytics(): Promise<{ totalProducts: number; totalUsers: number; completedRepairs: number; pendingRequests: number }> {
+    const [totalProducts] = await db.select({ count: count() }).from(products);
+    const [totalUsers] = await db.select({ count: count() }).from(users);
+    const [completedRepairs] = await db.select({ count: count() }).from(products).where(eq(products.status, "completed"));
+    const [pendingRequests] = await db.select({ count: count() }).from(componentRequests).where(eq(componentRequests.status, "pending"));
+    
+    return {
+      totalProducts: totalProducts.count,
+      totalUsers: totalUsers.count,
+      completedRepairs: completedRepairs.count,
+      pendingRequests: pendingRequests.count,
+    };
   }
 }
 

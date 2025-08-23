@@ -68,6 +68,10 @@ export const products = pgTable("products", {
   qrCodeData: varchar("qr_code_data").unique(),
   shelfLocationId: varchar("shelf_location_id").references(() => shelfLocations.id),
   status: varchar("status", { enum: ["pending", "in_progress", "completed"] }).default("pending"),
+  assignedEngineerId: varchar("assigned_engineer_id").references(() => users.id),
+  estimatedCompletionTime: integer("estimated_completion_time"), // in hours
+  reward: integer("reward"), // monetary reward if applicable
+  schematicUrl: varchar("schematic_url"), // URL to schematic files
   createdBy: varchar("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -79,6 +83,7 @@ export const components = pgTable("components", {
   componentName: varchar("component_name").notNull(),
   qrCode: varchar("qr_code").notNull().unique(),
   imageUrl: varchar("image_url"),
+  datasheetUrl: varchar("datasheet_url"),
   shelfLocationId: varchar("shelf_location_id").references(() => shelfLocations.id),
   stockQuantity: integer("stock_quantity").default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -110,6 +115,38 @@ export const fulfillmentLogs = pgTable("fulfillment_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Product timeline events
+export const productEvents = pgTable("product_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  eventType: varchar("event_type", { enum: ["received", "assigned", "component_requested", "component_received", "in_progress", "completed"] }).notNull(),
+  description: text("description").notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// System permissions for role management
+export const rolePermissions = pgTable("role_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  role: varchar("role", { enum: ["inventory", "engineer", "admin"] }).notNull(),
+  permission: varchar("permission").notNull(), // e.g., "can_request_components", "can_view_analytics"
+  enabled: boolean("enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// System activity logs
+export const activityLogs = pgTable("activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  action: varchar("action").notNull(),
+  entityType: varchar("entity_type"), // e.g., "product", "user", "component"
+  entityId: varchar("entity_id"),
+  description: text("description"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   firstName: true,
@@ -136,6 +173,13 @@ export const insertComponentRequestSchema = createInsertSchema(componentRequests
   requestedQuantity: true,
 });
 
+export const insertProductEventSchema = createInsertSchema(productEvents).pick({
+  productId: true,
+  eventType: true,
+  description: true,
+  userId: true,
+});
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type QRToken = typeof qrTokens.$inferSelect;
@@ -147,3 +191,7 @@ export type Component = typeof components.$inferSelect;
 export type ComponentRequest = typeof componentRequests.$inferSelect;
 export type InsertComponentRequest = z.infer<typeof insertComponentRequestSchema>;
 export type FulfillmentLog = typeof fulfillmentLogs.$inferSelect;
+export type ProductEvent = typeof productEvents.$inferSelect;
+export type InsertProductEvent = z.infer<typeof insertProductEventSchema>;
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type ActivityLog = typeof activityLogs.$inferSelect;
