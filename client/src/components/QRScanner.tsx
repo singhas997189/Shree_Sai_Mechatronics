@@ -3,36 +3,60 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Camera, X, RotateCw } from "lucide-react";
+import QrScanner from "qr-scanner";
 
-export default function QRScanner() {
+interface QRScannerProps {
+  onScanResult?: (result: string) => void;
+  scanType?: 'product' | 'location' | 'component' | 'any';
+  title?: string;
+  description?: string;
+}
+
+export default function QRScanner({ 
+  onScanResult, 
+  scanType = 'any',
+  title = "QR Code Login",
+  description = "Scan your QR code to access the system quickly"
+}: QRScannerProps) {
   const [hasPermission, setHasPermission] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const qrScannerRef = useRef<QrScanner | null>(null);
   const { toast } = useToast();
 
   const requestCameraAccess = async () => {
     try {
       setIsLoading(true);
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment" } 
-      });
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
+      if (!videoRef.current) {
+        throw new Error("Video element not found");
       }
+      
+      // Create QR scanner instance
+      const qrScanner = new QrScanner(
+        videoRef.current,
+        (result) => handleQRCodeDetected(result.data),
+        {
+          onDecodeError: (err) => {
+            // Silently handle decode errors - they're expected while scanning
+          },
+          preferredCamera: 'environment',
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+        }
+      );
+      
+      qrScannerRef.current = qrScanner;
+      await qrScanner.start();
       
       setHasPermission(true);
       setIsScanning(true);
-      
-      // Start QR detection
-      startQRDetection();
     } catch (error) {
+      console.error('Camera access error:', error);
       toast({
         title: "Camera Access Denied",
-        description: "Please enable camera permissions to use QR login.",
+        description: "Please enable camera permissions to use QR scanning.",
         variant: "destructive",
       });
     } finally {
@@ -40,28 +64,20 @@ export default function QRScanner() {
     }
   };
 
-  const startQRDetection = () => {
-    // Simulate QR code detection
-    // In a real implementation, this would use a QR scanner library
-    const detectQR = () => {
-      if (!isScanning) return;
-      
-      // Simulate finding a QR code after 3 seconds
-      setTimeout(() => {
-        if (isScanning) {
-          handleQRCodeDetected("sample-qr-token-123");
-        }
-      }, 3000);
-    };
-    
-    detectQR();
-  };
 
-  const handleQRCodeDetected = async (token: string) => {
+  const handleQRCodeDetected = async (qrData: string) => {
     setIsLoading(true);
     
     try {
-      const response = await apiRequest("POST", "/api/auth/qr-login", { token });
+      if (onScanResult) {
+        // Custom scan result handler
+        onScanResult(qrData);
+        stopScanning();
+        return;
+      }
+      
+      // Default behavior - try QR login
+      const response = await apiRequest("POST", "/api/auth/qr-login", { token: qrData });
       const data = await response.json();
       
       if (data.success) {
@@ -75,8 +91,8 @@ export default function QRScanner() {
       }
     } catch (error) {
       toast({
-        title: "QR Login Failed",
-        description: "Invalid or expired QR code.",
+        title: "QR Scan Failed",
+        description: "Invalid or unrecognized QR code.",
         variant: "destructive",
       });
     } finally {
@@ -89,29 +105,33 @@ export default function QRScanner() {
     setIsScanning(false);
     setHasPermission(false);
     
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop();
+      qrScannerRef.current.destroy();
+      qrScannerRef.current = null;
     }
   };
 
   const switchCamera = async () => {
-    // In a real implementation, this would switch between front/back cameras
-    toast({
-      title: "Camera Switch",
-      description: "Camera switching not implemented in demo.",
-    });
+    if (qrScannerRef.current) {
+      try {
+        await qrScannerRef.current.setCamera('environment');
+      } catch (error) {
+        toast({
+          title: "Camera Switch Failed",
+          description: "Unable to switch camera.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   useEffect(() => {
     return () => {
       // Cleanup on unmount
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop();
+        qrScannerRef.current.destroy();
       }
     };
   }, []);
@@ -124,8 +144,8 @@ export default function QRScanner() {
             <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM19 13h2v2h-2zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM19 15h2v2h-2zM17 13h2v2h-2z"/>
           </svg>
         </div>
-        <h3 className="text-xl font-bold text-dark-charcoal mb-2">QR Code Login</h3>
-        <p className="text-steel-gray mb-6">Scan your QR code to access the system quickly</p>
+        <h3 className="text-xl font-bold text-dark-charcoal mb-2">{title}</h3>
+        <p className="text-steel-gray mb-6">{description}</p>
 
         <div className="bg-orange-50 border-2 border-safety-orange rounded-xl p-6 mb-6">
           <Camera className="text-safety-orange w-12 h-12 mx-auto mb-3" />

@@ -6,6 +6,8 @@ import {
   timestamp,
   varchar,
   text,
+  integer,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -46,6 +48,68 @@ export const qrTokens = pgTable("qr_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Shelf locations for QR-coded storage
+export const shelfLocations = pgTable("shelf_locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationName: varchar("location_name").notNull(),
+  qrCode: varchar("qr_code").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Products table for repair tracking
+export const products = pgTable("products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  uniqueRepairId: varchar("unique_repair_id").notNull().unique(),
+  productName: varchar("product_name").notNull(),
+  companyName: varchar("company_name").notNull(),
+  problemDescription: text("problem_description").notNull(),
+  isRepeatedItem: boolean("is_repeated_item").default(false),
+  qrCodeData: varchar("qr_code_data").unique(),
+  shelfLocationId: varchar("shelf_location_id").references(() => shelfLocations.id),
+  status: varchar("status", { enum: ["pending", "in_progress", "completed"] }).default("pending"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Components/parts inventory
+export const components = pgTable("components", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  componentName: varchar("component_name").notNull(),
+  qrCode: varchar("qr_code").notNull().unique(),
+  imageUrl: varchar("image_url"),
+  shelfLocationId: varchar("shelf_location_id").references(() => shelfLocations.id),
+  stockQuantity: integer("stock_quantity").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Component requests from engineers
+export const componentRequests = pgTable("component_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  componentId: varchar("component_id").notNull().references(() => components.id),
+  requestedQuantity: integer("requested_quantity").notNull(),
+  status: varchar("status", { enum: ["pending", "fulfilled", "cancelled"] }).default("pending"),
+  requestedBy: varchar("requested_by").notNull().references(() => users.id),
+  fulfilledBy: varchar("fulfilled_by").references(() => users.id),
+  fulfilledAt: timestamp("fulfilled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Fulfillment logs for Google Sheets integration
+export const fulfillmentLogs = pgTable("fulfillment_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  componentId: varchar("component_id").notNull().references(() => components.id),
+  requestId: varchar("request_id").notNull().references(() => componentRequests.id),
+  quantity: integer("quantity").notNull(),
+  inventoryPersonId: varchar("inventory_person_id").notNull().references(() => users.id),
+  googleSheetsLogged: boolean("google_sheets_logged").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   firstName: true,
@@ -58,7 +122,28 @@ export const insertQRTokenSchema = createInsertSchema(qrTokens).pick({
   expiresAt: true,
 });
 
+export const insertProductSchema = createInsertSchema(products).pick({
+  productName: true,
+  companyName: true,
+  problemDescription: true,
+  isRepeatedItem: true,
+  shelfLocationId: true,
+});
+
+export const insertComponentRequestSchema = createInsertSchema(componentRequests).pick({
+  productId: true,
+  componentId: true,
+  requestedQuantity: true,
+});
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type QRToken = typeof qrTokens.$inferSelect;
 export type InsertQRToken = z.infer<typeof insertQRTokenSchema>;
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type ShelfLocation = typeof shelfLocations.$inferSelect;
+export type Component = typeof components.$inferSelect;
+export type ComponentRequest = typeof componentRequests.$inferSelect;
+export type InsertComponentRequest = z.infer<typeof insertComponentRequestSchema>;
+export type FulfillmentLog = typeof fulfillmentLogs.$inferSelect;

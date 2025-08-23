@@ -1,13 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertTriangle, TrendingUp, DollarSign, Plus, Scan, FileDown, BarChart, Bell, LogOut } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProductEntryForm from "@/components/ProductEntryForm";
+import LocationAssignment from "@/components/LocationAssignment";
+import ComponentRequestDashboard from "@/components/ComponentRequestDashboard";
+import { Package, AlertTriangle, TrendingUp, DollarSign, Plus, Scan, FileDown, BarChart, Bell, LogOut, ClipboardList, MapPin } from "lucide-react";
 
 export default function InventoryDashboard() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'inventory')) {
@@ -68,110 +73,189 @@ export default function InventoryDashboard() {
 
       {/* Dashboard Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-steel-gray text-sm font-medium">Total Items</p>
-                  <p className="text-3xl font-bold text-dark-charcoal" data-testid="stat-total-items">1,247</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <Package className="text-industrial-blue w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsTrigger value="dashboard" data-testid="tab-dashboard">
+              <BarChart className="w-4 h-4 mr-2" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="new-product" data-testid="tab-new-product">
+              <Plus className="w-4 h-4 mr-2" />
+              New Product
+            </TabsTrigger>
+            <TabsTrigger value="location" data-testid="tab-location">
+              <MapPin className="w-4 h-4 mr-2" />
+              Location
+            </TabsTrigger>
+            <TabsTrigger value="requests" data-testid="tab-requests">
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Requests
+            </TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-steel-gray text-sm font-medium">Low Stock</p>
-                  <p className="text-3xl font-bold text-error-red" data-testid="stat-low-stock">23</p>
-                </div>
-                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                  <AlertTriangle className="text-error-red w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <TabsContent value="dashboard" className="space-y-8">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-steel-gray text-sm font-medium">Total Items</p>
+                      <p className="text-3xl font-bold text-dark-charcoal" data-testid="stat-total-items">1,247</p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                      <Package className="text-industrial-blue w-6 h-6" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-steel-gray text-sm font-medium">Orders Today</p>
-                  <p className="text-3xl font-bold text-success-green" data-testid="stat-orders-today">18</p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="text-success-green w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-steel-gray text-sm font-medium">Low Stock</p>
+                      <p className="text-3xl font-bold text-error-red" data-testid="stat-low-stock">23</p>
+                    </div>
+                    <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                      <AlertTriangle className="text-error-red w-6 h-6" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-steel-gray text-sm font-medium">Value</p>
-                  <p className="text-3xl font-bold text-dark-charcoal" data-testid="stat-total-value">₹2.4L</p>
-                </div>
-                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-                  <DollarSign className="text-steel-gray w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-steel-gray text-sm font-medium">Orders Today</p>
+                      <p className="text-3xl font-bold text-success-green" data-testid="stat-orders-today">18</p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                      <TrendingUp className="text-success-green w-6 h-6" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Quick Actions */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-dark-charcoal">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button 
-                variant="outline" 
-                className="p-6 h-auto flex flex-col items-center hover:border-industrial-blue hover:bg-blue-50"
-                data-testid="button-add-item"
-              >
-                <Plus className="text-industrial-blue w-6 h-6 mb-2" />
-                <span className="font-semibold text-dark-charcoal text-sm">Add Item</span>
-              </Button>
-
-              <Button 
-                variant="outline" 
-                className="p-6 h-auto flex flex-col items-center hover:border-safety-orange hover:bg-orange-50"
-                data-testid="button-scan-qr"
-              >
-                <Scan className="text-safety-orange w-6 h-6 mb-2" />
-                <span className="font-semibold text-dark-charcoal text-sm">Scan QR</span>
-              </Button>
-
-              <Button 
-                variant="outline" 
-                className="p-6 h-auto flex flex-col items-center hover:border-success-green hover:bg-green-50"
-                data-testid="button-export"
-              >
-                <FileDown className="text-success-green w-6 h-6 mb-2" />
-                <span className="font-semibold text-dark-charcoal text-sm">Export</span>
-              </Button>
-
-              <Button 
-                variant="outline" 
-                className="p-6 h-auto flex flex-col items-center hover:border-steel-gray hover:bg-gray-50"
-                data-testid="button-reports"
-              >
-                <BarChart className="text-steel-gray w-6 h-6 mb-2" />
-                <span className="font-semibold text-dark-charcoal text-sm">Reports</span>
-              </Button>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-steel-gray text-sm font-medium">Value</p>
+                      <p className="text-3xl font-bold text-dark-charcoal" data-testid="stat-total-value">₹2.4L</p>
+                    </div>
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                      <DollarSign className="text-steel-gray w-6 h-6" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-dark-charcoal">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab("new-product")}
+                    className="p-6 h-auto flex flex-col items-center hover:border-industrial-blue hover:bg-blue-50"
+                    data-testid="button-add-item"
+                  >
+                    <Plus className="text-industrial-blue w-6 h-6 mb-2" />
+                    <span className="font-semibold text-dark-charcoal text-sm">Add Item</span>
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab("location")}
+                    className="p-6 h-auto flex flex-col items-center hover:border-safety-orange hover:bg-orange-50"
+                    data-testid="button-assign-location"
+                  >
+                    <MapPin className="text-safety-orange w-6 h-6 mb-2" />
+                    <span className="font-semibold text-dark-charcoal text-sm">Assign Location</span>
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab("requests")}
+                    className="p-6 h-auto flex flex-col items-center hover:border-success-green hover:bg-green-50"
+                    data-testid="button-view-requests"
+                  >
+                    <ClipboardList className="text-success-green w-6 h-6 mb-2" />
+                    <span className="font-semibold text-dark-charcoal text-sm">View Requests</span>
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    className="p-6 h-auto flex flex-col items-center hover:border-steel-gray hover:bg-gray-50"
+                    data-testid="button-reports"
+                  >
+                    <BarChart className="text-steel-gray w-6 h-6 mb-2" />
+                    <span className="font-semibold text-dark-charcoal text-sm">Reports</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-dark-charcoal">Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-success-green rounded-full mr-3"></div>
+                      <div>
+                        <p className="font-semibold text-dark-charcoal">Product SSM-98765 assigned to Shelf A-12</p>
+                        <p className="text-sm text-steel-gray">2 minutes ago</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-steel-gray">Location</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-industrial-blue rounded-full mr-3"></div>
+                      <div>
+                        <p className="font-semibold text-dark-charcoal">New product entry: Hydraulic Pump</p>
+                        <p className="text-sm text-steel-gray">5 minutes ago</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-steel-gray">Product</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-safety-orange rounded-full mr-3"></div>
+                      <div>
+                        <p className="font-semibold text-dark-charcoal">Component request fulfilled for SSM-98752</p>
+                        <p className="text-sm text-steel-gray">12 minutes ago</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-steel-gray">Request</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="new-product">
+            <ProductEntryForm onProductCreated={() => setActiveTab("dashboard")} />
+          </TabsContent>
+
+          <TabsContent value="location">
+            <LocationAssignment onLocationAssigned={() => setActiveTab("dashboard")} />
+          </TabsContent>
+
+          <TabsContent value="requests">
+            <ComponentRequestDashboard />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
