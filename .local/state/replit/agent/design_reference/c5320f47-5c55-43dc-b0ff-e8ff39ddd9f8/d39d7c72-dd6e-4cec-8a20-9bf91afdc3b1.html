@@ -1,0 +1,826 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shree Sai Mechatronics - Authentication System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'industrial-blue': '#1565C0',
+                        'steel-gray': '#37474F',
+                        'safety-orange': '#FF6F00',
+                        'success-green': '#2E7D32',
+                        'error-red': '#D32F2F',
+                        'dark-charcoal': '#263238'
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="font-inter bg-gray-50 min-h-screen">
+    <!-- @COMPONENT: App [main application container] -->
+    <div id="app" class="min-h-screen">
+        
+        <!-- @COMPONENT: LoginPage [initial authentication interface] -->
+        <div id="loginPage" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100">
+            <div class="w-full max-w-md">
+                <!-- Company Header -->
+                <div class="text-center mb-8">
+                    <!-- Industrial workshop environment with machinery and equipment -->
+                    <div class="w-20 h-20 mx-auto mb-4 bg-industrial-blue rounded-2xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-cogs text-white text-2xl"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold text-dark-charcoal mb-2">Shree Sai Mechatronics</h1>
+                    <p class="text-steel-gray font-medium">Workshop Management System</p>
+                </div>
+
+                <!-- Authentication Card -->
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                    <!-- Login Options Tabs -->
+                    <div class="flex border-b border-gray-200">
+                        <button id="standardLoginTab" class="flex-1 py-4 px-6 text-center font-semibold text-industrial-blue border-b-2 border-industrial-blue bg-blue-50 transition-all">
+                            <i class="fas fa-user mr-2"></i>Standard Login
+                        </button>
+                        <button id="qrLoginTab" class="flex-1 py-4 px-6 text-center font-semibold text-steel-gray hover:text-industrial-blue hover:bg-gray-50 transition-all">
+                            <i class="fas fa-qrcode mr-2"></i>QR Login
+                        </button>
+                    </div>
+
+                    <!-- Standard Login Form -->
+                    <!-- @COMPONENT: StandardLoginForm [username/password authentication] -->
+                    <div id="standardLoginForm" class="p-8">
+                        <form class="space-y-6">
+                            <!-- @STATE: username:string = "" -->
+                            <div>
+                                <label for="username" class="block text-sm font-semibold text-dark-charcoal mb-2">Username</label>
+                                <div class="relative">
+                                    <i class="fas fa-user absolute left-4 top-1/2 transform -translate-y-1/2 text-steel-gray"></i>
+                                    <input 
+                                        type="text" 
+                                        id="username" 
+                                        name="username"
+                                        class="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-industrial-blue focus:ring-2 focus:ring-blue-100 outline-none transition-all text-lg"
+                                        placeholder="Enter your username"
+                                        data-bind="username"
+                                        data-validation="required"
+                                    />
+                                </div>
+                                <div class="text-error-red text-sm mt-1 hidden" id="usernameError">Username is required</div>
+                            </div>
+
+                            <!-- @STATE: password:string = "" -->
+                            <div>
+                                <label for="password" class="block text-sm font-semibold text-dark-charcoal mb-2">Password</label>
+                                <div class="relative">
+                                    <i class="fas fa-lock absolute left-4 top-1/2 transform -translate-y-1/2 text-steel-gray"></i>
+                                    <input 
+                                        type="password" 
+                                        id="password" 
+                                        name="password"
+                                        class="w-full pl-12 pr-12 py-4 border-2 border-gray-200 rounded-xl focus:border-industrial-blue focus:ring-2 focus:ring-blue-100 outline-none transition-all text-lg"
+                                        placeholder="Enter your password"
+                                        data-bind="password"
+                                        data-validation="required"
+                                    />
+                                    <button type="button" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-steel-gray hover:text-dark-charcoal transition-colors">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="text-error-red text-sm mt-1 hidden" id="passwordError">Password is required</div>
+                            </div>
+
+                            <!-- Remember Me & Forgot Password -->
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="w-5 h-5 text-industrial-blue border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-100">
+                                    <span class="ml-3 text-sm font-medium text-steel-gray">Remember me</span>
+                                </label>
+                                <a href="#" class="text-sm font-semibold text-industrial-blue hover:text-blue-800 transition-colors">Forgot password?</a>
+                            </div>
+
+                            <!-- Login Button -->
+                            <button 
+                                type="submit" 
+                                class="w-full py-4 px-6 bg-industrial-blue text-white font-bold text-lg rounded-xl hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                data-event="click:handleStandardLogin"
+                                data-implementation="Should validate credentials with bcrypt hashing"
+                            >
+                                <span class="login-text">Sign In</span>
+                                <i class="fas fa-spinner fa-spin ml-2 hidden loading-spinner"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <!-- @END_COMPONENT: StandardLoginForm -->
+
+                    <!-- QR Login Interface -->
+                    <!-- @COMPONENT: QRLoginForm [camera-based QR authentication] -->
+                    <div id="qrLoginForm" class="p-8 hidden">
+                        <!-- QR Scanner Instructions -->
+                        <div class="text-center mb-6">
+                            <div class="w-16 h-16 mx-auto mb-4 bg-safety-orange rounded-2xl flex items-center justify-center">
+                                <i class="fas fa-qrcode text-white text-2xl"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-dark-charcoal mb-2">QR Code Login</h3>
+                            <p class="text-steel-gray">Scan your QR code to access the system quickly</p>
+                        </div>
+
+                        <!-- Camera Permission Request -->
+                        <!-- @STATE: cameraPermission:boolean = false -->
+                        <div id="cameraPermissionRequest" class="text-center">
+                            <div class="bg-orange-50 border-2 border-safety-orange rounded-xl p-6 mb-6">
+                                <i class="fas fa-camera text-safety-orange text-3xl mb-3"></i>
+                                <h4 class="font-semibold text-dark-charcoal mb-2">Camera Access Required</h4>
+                                <p class="text-steel-gray text-sm mb-4">Allow camera access to scan QR codes for quick login</p>
+                                <button 
+                                    id="requestCameraBtn"
+                                    class="w-full py-3 px-6 bg-safety-orange text-white font-bold rounded-xl hover:bg-orange-600 transition-all"
+                                    data-event="click:requestCameraAccess"
+                                    data-implementation="Should request camera permissions using navigator.mediaDevices.getUserMedia"
+                                >
+                                    <i class="fas fa-camera mr-2"></i>Enable Camera
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- QR Scanner Viewport -->
+                        <!-- @STATE: isScanning:boolean = false -->
+                        <div id="qrScannerViewport" class="hidden">
+                            <div class="relative bg-black rounded-xl overflow-hidden mb-6">
+                                <!-- @FUNCTIONALITY: This should implement QR scanner using react-qr-scanner or similar library -->
+                                <div class="aspect-square bg-black flex items-center justify-center relative">
+                                    <video id="qrVideo" class="w-full h-full object-cover" autoplay playsinline></video>
+                                    
+                                    <!-- Scanner Overlay -->
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="w-64 h-64 border-4 border-safety-orange rounded-xl relative">
+                                            <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-xl"></div>
+                                            <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-xl"></div>
+                                            <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-xl"></div>
+                                            <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-xl"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Scanning Animation -->
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="w-64 h-1 bg-safety-orange opacity-75 animate-pulse"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Scanner Status -->
+                                <div class="absolute bottom-4 left-4 right-4 text-center">
+                                    <div class="bg-black bg-opacity-50 rounded-lg p-3">
+                                        <p class="text-white text-sm font-medium">Position QR code within the frame</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Scanner Controls -->
+                            <div class="flex gap-4">
+                                <button 
+                                    id="stopScanningBtn"
+                                    class="flex-1 py-3 px-6 bg-gray-200 text-steel-gray font-semibold rounded-xl hover:bg-gray-300 transition-all"
+                                    data-event="click:stopScanning"
+                                >
+                                    <i class="fas fa-times mr-2"></i>Cancel
+                                </button>
+                                <button 
+                                    id="switchCameraBtn"
+                                    class="py-3 px-6 bg-steel-gray text-white font-semibold rounded-xl hover:bg-gray-700 transition-all"
+                                    data-event="click:switchCamera"
+                                >
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: QRLoginForm -->
+                </div>
+
+                <!-- System Info -->
+                <div class="text-center mt-6 text-sm text-steel-gray">
+                    <p>© 2024 Shree Sai Mechatronics</p>
+                    <p>Workshop Management System v2.1</p>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: LoginPage -->
+
+        <!-- Role Selection Modal -->
+        <!-- @COMPONENT: RoleSelectionModal [user role assignment interface] -->
+        <div id="roleSelectionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
+                <div class="p-8">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 mx-auto mb-4 bg-success-green rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-check text-white text-2xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-dark-charcoal mb-2">Authentication Successful</h3>
+                        <p class="text-steel-gray">Select your role to continue</p>
+                    </div>
+
+                    <!-- Role Options -->
+                    <div class="space-y-4">
+                        <button 
+                            class="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-industrial-blue hover:bg-blue-50 transition-all text-left group"
+                            data-event="click:selectRole"
+                            data-role="inventory"
+                        >
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-industrial-blue group-hover:text-white transition-all">
+                                    <i class="fas fa-boxes text-industrial-blue group-hover:text-white"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="font-bold text-dark-charcoal text-lg">Inventory Manager</h4>
+                                    <p class="text-steel-gray text-sm">Manage stock, orders, and supplies</p>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400 ml-auto group-hover:text-industrial-blue"></i>
+                            </div>
+                        </button>
+
+                        <button 
+                            class="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-safety-orange hover:bg-orange-50 transition-all text-left group"
+                            data-event="click:selectRole"
+                            data-role="engineer"
+                        >
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center group-hover:bg-safety-orange group-hover:text-white transition-all">
+                                    <i class="fas fa-hard-hat text-safety-orange group-hover:text-white"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="font-bold text-dark-charcoal text-lg">Engineer</h4>
+                                    <p class="text-steel-gray text-sm">Access machinery and production tools</p>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400 ml-auto group-hover:text-safety-orange"></i>
+                            </div>
+                        </button>
+
+                        <button 
+                            class="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-success-green hover:bg-green-50 transition-all text-left group"
+                            data-event="click:selectRole"
+                            data-role="admin"
+                        >
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-success-green group-hover:text-white transition-all">
+                                    <i class="fas fa-shield-alt text-success-green group-hover:text-white"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="font-bold text-dark-charcoal text-lg">Administrator</h4>
+                                    <p class="text-steel-gray text-sm">Full system access and user management</p>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400 ml-auto group-hover:text-success-green"></i>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: RoleSelectionModal -->
+
+        <!-- Inventory Dashboard -->
+        <!-- @COMPONENT: InventoryDashboard [inventory management interface] -->
+        <div id="inventoryDashboard" class="hidden min-h-screen bg-gray-50">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center py-4">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-industrial-blue rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-boxes text-white"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold text-dark-charcoal">Inventory Dashboard</h1>
+                                <p class="text-steel-gray text-sm">Manage workshop inventory and supplies</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <button class="p-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all">
+                                <i class="fas fa-bell text-steel-gray"></i>
+                            </button>
+                            <button class="p-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all" data-event="click:logout">
+                                <i class="fas fa-sign-out-alt text-steel-gray"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-steel-gray text-sm font-medium">Total Items</p>
+                                <p class="text-3xl font-bold text-dark-charcoal" data-bind="stats.totalItems">1,247</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-cubes text-industrial-blue"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-steel-gray text-sm font-medium">Low Stock</p>
+                                <p class="text-3xl font-bold text-error-red" data-bind="stats.lowStock">23</p>
+                            </div>
+                            <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-error-red"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-steel-gray text-sm font-medium">Orders Today</p>
+                                <p class="text-3xl font-bold text-success-green" data-bind="stats.ordersToday">18</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-shipping-fast text-success-green"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-steel-gray text-sm font-medium">Value</p>
+                                <p class="text-3xl font-bold text-dark-charcoal" data-bind="stats.totalValue">₹2.4L</p>
+                            </div>
+                            <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-rupee-sign text-steel-gray"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                    <h3 class="text-lg font-bold text-dark-charcoal mb-4">Quick Actions</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <button class="p-4 border-2 border-gray-200 rounded-xl hover:border-industrial-blue hover:bg-blue-50 transition-all text-center">
+                            <i class="fas fa-plus text-industrial-blue text-xl mb-2"></i>
+                            <p class="font-semibold text-dark-charcoal text-sm">Add Item</p>
+                        </button>
+                        <button class="p-4 border-2 border-gray-200 rounded-xl hover:border-safety-orange hover:bg-orange-50 transition-all text-center">
+                            <i class="fas fa-qrcode text-safety-orange text-xl mb-2"></i>
+                            <p class="font-semibold text-dark-charcoal text-sm">Scan QR</p>
+                        </button>
+                        <button class="p-4 border-2 border-gray-200 rounded-xl hover:border-success-green hover:bg-green-50 transition-all text-center">
+                            <i class="fas fa-file-export text-success-green text-xl mb-2"></i>
+                            <p class="font-semibold text-dark-charcoal text-sm">Export</p>
+                        </button>
+                        <button class="p-4 border-2 border-gray-200 rounded-xl hover:border-steel-gray hover:bg-gray-50 transition-all text-center">
+                            <i class="fas fa-chart-bar text-steel-gray text-xl mb-2"></i>
+                            <p class="font-semibold text-dark-charcoal text-sm">Reports</p>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <!-- @END_COMPONENT: InventoryDashboard -->
+
+        <!-- Engineer Dashboard -->
+        <!-- @COMPONENT: EngineerDashboard [engineering tools interface] -->
+        <div id="engineerDashboard" class="hidden min-h-screen bg-gray-50">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center py-4">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-safety-orange rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-hard-hat text-white"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold text-dark-charcoal">Engineer Dashboard</h1>
+                                <p class="text-steel-gray text-sm">Production tools and machinery control</p>
+                            </div>
+                        </div>
+                        <button class="p-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all" data-event="click:logout">
+                            <i class="fas fa-sign-out-alt text-steel-gray"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Machine Status Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Manufacturing dashboard with industrial equipment and control panels -->
+                    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-bold text-dark-charcoal mb-4">Machine Status</h3>
+                        <div class="space-y-4">
+                            <!-- @MAP: machines.map(machine => ( -->
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-success-green rounded-full mr-3"></div>
+                                    <div>
+                                        <p class="font-semibold text-dark-charcoal" data-bind="machine.name">CNC Machine #1</p>
+                                        <p class="text-steel-gray text-sm" data-bind="machine.status">Running - 87% efficiency</p>
+                                    </div>
+                                </div>
+                                <button class="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-all">
+                                    <i class="fas fa-cog text-steel-gray"></i>
+                                </button>
+                            </div>
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+                                    <div>
+                                        <p class="font-semibold text-dark-charcoal">Lathe Machine #2</p>
+                                        <p class="text-steel-gray text-sm">Maintenance Required</p>
+                                    </div>
+                                </div>
+                                <button class="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-all">
+                                    <i class="fas fa-wrench text-steel-gray"></i>
+                                </button>
+                            </div>
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-success-green rounded-full mr-3"></div>
+                                    <div>
+                                        <p class="font-semibold text-dark-charcoal">Assembly Line A</p>
+                                        <p class="text-steel-gray text-sm">Operational - 94% efficiency</p>
+                                    </div>
+                                </div>
+                                <button class="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-all">
+                                    <i class="fas fa-play text-steel-gray"></i>
+                                </button>
+                            </div>
+                            <!-- @END_MAP )) -->
+                        </div>
+                    </div>
+
+                    <!-- Quick Tools -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-bold text-dark-charcoal mb-4">Engineering Tools</h3>
+                        <div class="space-y-3">
+                            <button class="w-full p-4 bg-safety-orange text-white font-semibold rounded-xl hover:bg-orange-600 transition-all">
+                                <i class="fas fa-qrcode mr-2"></i>Scan Equipment
+                            </button>
+                            <button class="w-full p-4 bg-industrial-blue text-white font-semibold rounded-xl hover:bg-blue-700 transition-all">
+                                <i class="fas fa-clipboard-list mr-2"></i>Work Orders
+                            </button>
+                            <button class="w-full p-4 bg-success-green text-white font-semibold rounded-xl hover:bg-green-700 transition-all">
+                                <i class="fas fa-tools mr-2"></i>Maintenance
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <!-- @END_COMPONENT: EngineerDashboard -->
+
+        <!-- Admin Dashboard -->
+        <!-- @COMPONENT: AdminDashboard [administrative control interface] -->
+        <div id="adminDashboard" class="hidden min-h-screen bg-gray-50">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center py-4">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-success-green rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-shield-alt text-white"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold text-dark-charcoal">Admin Dashboard</h1>
+                                <p class="text-steel-gray text-sm">System administration and user management</p>
+                            </div>
+                        </div>
+                        <button class="p-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all" data-event="click:logout">
+                            <i class="fas fa-sign-out-alt text-steel-gray"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <!-- Admin Overview Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-steel-gray text-sm font-medium">Active Users</p>
+                                <p class="text-3xl font-bold text-dark-charcoal" data-bind="admin.activeUsers">42</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-users text-success-green"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-steel-gray text-sm font-medium">System Health</p>
+                                <p class="text-3xl font-bold text-success-green" data-bind="admin.systemHealth">98%</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-heartbeat text-success-green"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-steel-gray text-sm font-medium">QR Logins Today</p>
+                                <p class="text-3xl font-bold text-safety-orange" data-bind="admin.qrLogins">156</p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-qrcode text-safety-orange"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Tools -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-bold text-dark-charcoal mb-4">User Management</h3>
+                        <div class="space-y-3">
+                            <button class="w-full p-4 bg-industrial-blue text-white font-semibold rounded-xl hover:bg-blue-700 transition-all text-left">
+                                <i class="fas fa-user-plus mr-3"></i>Add New User
+                            </button>
+                            <button class="w-full p-4 bg-safety-orange text-white font-semibold rounded-xl hover:bg-orange-600 transition-all text-left">
+                                <i class="fas fa-qrcode mr-3"></i>Generate QR Codes
+                            </button>
+                            <button class="w-full p-4 bg-success-green text-white font-semibold rounded-xl hover:bg-green-700 transition-all text-left">
+                                <i class="fas fa-users-cog mr-3"></i>Manage Permissions
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-bold text-dark-charcoal mb-4">System Control</h3>
+                        <div class="space-y-3">
+                            <button class="w-full p-4 bg-steel-gray text-white font-semibold rounded-xl hover:bg-gray-700 transition-all text-left">
+                                <i class="fas fa-database mr-3"></i>Backup System
+                            </button>
+                            <button class="w-full p-4 bg-yellow-500 text-white font-semibold rounded-xl hover:bg-yellow-600 transition-all text-left">
+                                <i class="fas fa-shield-virus mr-3"></i>Security Audit
+                            </button>
+                            <button class="w-full p-4 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-all text-left">
+                                <i class="fas fa-chart-line mr-3"></i>Analytics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <!-- @END_COMPONENT: AdminDashboard -->
+
+        <!-- Loading Overlay -->
+        <!-- @COMPONENT: LoadingOverlay [authentication processing indicator] -->
+        <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-2xl p-8 text-center">
+                <div class="w-16 h-16 mx-auto mb-4 border-4 border-industrial-blue border-t-transparent rounded-full animate-spin"></div>
+                <h3 class="text-lg font-bold text-dark-charcoal mb-2">Authenticating</h3>
+                <p class="text-steel-gray">Please wait while we verify your credentials...</p>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: LoadingOverlay -->
+
+        <!-- Error Toast -->
+        <!-- @COMPONENT: ErrorToast [error message display] -->
+        <div id="errorToast" class="fixed top-4 right-4 bg-error-red text-white p-6 rounded-xl shadow-lg hidden z-50">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-circle mr-3"></i>
+                <div>
+                    <p class="font-semibold">Authentication Failed</p>
+                    <p class="text-sm opacity-90" data-bind="error.message">Invalid username or password</p>
+                </div>
+                <button class="ml-4 p-1 hover:bg-red-600 rounded transition-all" data-event="click:closeError">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: ErrorToast -->
+
+    </div>
+    <!-- @END_COMPONENT: App -->
+
+    <script>
+        // Application State Management
+        (function() {
+            let currentView = 'login';
+            let isScanning = false;
+            let cameraStream = null;
+
+            // DOM Elements
+            const loginPage = document.getElementById('loginPage');
+            const standardLoginTab = document.getElementById('standardLoginTab');
+            const qrLoginTab = document.getElementById('qrLoginTab');
+            const standardLoginForm = document.getElementById('standardLoginForm');
+            const qrLoginForm = document.getElementById('qrLoginForm');
+            const roleSelectionModal = document.getElementById('roleSelectionModal');
+            const inventoryDashboard = document.getElementById('inventoryDashboard');
+            const engineerDashboard = document.getElementById('engineerDashboard');
+            const adminDashboard = document.getElementById('adminDashboard');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const errorToast = document.getElementById('errorToast');
+
+            // Tab Switching
+            standardLoginTab.addEventListener('click', () => switchToStandardLogin());
+            qrLoginTab.addEventListener('click', () => switchToQRLogin());
+
+            function switchToStandardLogin() {
+                standardLoginTab.className = "flex-1 py-4 px-6 text-center font-semibold text-industrial-blue border-b-2 border-industrial-blue bg-blue-50 transition-all";
+                qrLoginTab.className = "flex-1 py-4 px-6 text-center font-semibold text-steel-gray hover:text-industrial-blue hover:bg-gray-50 transition-all";
+                standardLoginForm.classList.remove('hidden');
+                qrLoginForm.classList.add('hidden');
+                stopCamera();
+            }
+
+            function switchToQRLogin() {
+                qrLoginTab.className = "flex-1 py-4 px-6 text-center font-semibold text-safety-orange border-b-2 border-safety-orange bg-orange-50 transition-all";
+                standardLoginTab.className = "flex-1 py-4 px-6 text-center font-semibold text-steel-gray hover:text-safety-orange hover:bg-gray-50 transition-all";
+                qrLoginForm.classList.remove('hidden');
+                standardLoginForm.classList.add('hidden');
+            }
+
+            // Camera Handling
+            document.getElementById('requestCameraBtn').addEventListener('click', async () => {
+                // TODO: Implement camera access request using navigator.mediaDevices.getUserMedia
+                try {
+                    showLoading();
+                    // Simulate camera permission request
+                    setTimeout(() => {
+                        hideLoading();
+                        document.getElementById('cameraPermissionRequest').classList.add('hidden');
+                        document.getElementById('qrScannerViewport').classList.remove('hidden');
+                        startQRScanning();
+                    }, 1500);
+                } catch (error) {
+                    hideLoading();
+                    showError('Camera access denied. Please enable camera permissions.');
+                }
+            });
+
+            function startQRScanning() {
+                isScanning = true;
+                // TODO: Implement QR scanner using react-qr-scanner or qr-scanner library
+                // TODO: Decode QR token and validate against backend
+                
+                // Simulate successful QR scan after 3 seconds
+                setTimeout(() => {
+                    if (isScanning) {
+                        simulateSuccessfulLogin();
+                    }
+                }, 3000);
+            }
+
+            function stopCamera() {
+                isScanning = false;
+                if (cameraStream) {
+                    // TODO: Stop camera stream
+                    cameraStream = null;
+                }
+                document.getElementById('cameraPermissionRequest').classList.remove('hidden');
+                document.getElementById('qrScannerViewport').classList.add('hidden');
+            }
+
+            document.getElementById('stopScanningBtn').addEventListener('click', stopCamera);
+
+            // Standard Login Form Handling
+            document.querySelector('#standardLoginForm form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                // TODO: Implement proper validation and bcrypt password hashing
+                if (!username || !password) {
+                    showError('Please fill in all fields');
+                    return;
+                }
+
+                showLoading();
+                // Simulate authentication
+                setTimeout(() => {
+                    hideLoading();
+                    simulateSuccessfulLogin();
+                }, 2000);
+            });
+
+            // Role Selection
+            document.querySelectorAll('[data-role]').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const role = e.currentTarget.getAttribute('data-role');
+                    redirectToDashboard(role);
+                });
+            });
+
+            function simulateSuccessfulLogin() {
+                loginPage.classList.add('hidden');
+                roleSelectionModal.classList.remove('hidden');
+            }
+
+            function redirectToDashboard(role) {
+                // TODO: Implement proper role-based routing and session management
+                roleSelectionModal.classList.add('hidden');
+                
+                // Hide all dashboards
+                inventoryDashboard.classList.add('hidden');
+                engineerDashboard.classList.add('hidden');
+                adminDashboard.classList.add('hidden');
+
+                // Show role-specific dashboard
+                switch(role) {
+                    case 'inventory':
+                        inventoryDashboard.classList.remove('hidden');
+                        break;
+                    case 'engineer':
+                        engineerDashboard.classList.remove('hidden');
+                        break;
+                    case 'admin':
+                        adminDashboard.classList.remove('hidden');
+                        break;
+                }
+            }
+
+            // Logout Functionality
+            document.querySelectorAll('[data-event="click:logout"]').forEach(button => {
+                button.addEventListener('click', () => {
+                    // TODO: Implement session cleanup and secure logout
+                    currentView = 'login';
+                    inventoryDashboard.classList.add('hidden');
+                    engineerDashboard.classList.add('hidden');
+                    adminDashboard.classList.add('hidden');
+                    roleSelectionModal.classList.add('hidden');
+                    loginPage.classList.remove('hidden');
+                    
+                    // Reset form
+                    document.getElementById('username').value = '';
+                    document.getElementById('password').value = '';
+                    switchToStandardLogin();
+                });
+            });
+
+            // Utility Functions
+            function showLoading() {
+                loadingOverlay.classList.remove('hidden');
+            }
+
+            function hideLoading() {
+                loadingOverlay.classList.add('hidden');
+            }
+
+            function showError(message) {
+                const errorMessage = errorToast.querySelector('[data-bind="error.message"]');
+                errorMessage.textContent = message;
+                errorToast.classList.remove('hidden');
+                setTimeout(() => {
+                    errorToast.classList.add('hidden');
+                }, 5000);
+            }
+
+            document.querySelector('[data-event="click:closeError"]').addEventListener('click', () => {
+                errorToast.classList.add('hidden');
+            });
+
+            // Form Validation
+            function validateField(fieldId, errorId) {
+                const field = document.getElementById(fieldId);
+                const error = document.getElementById(errorId);
+                
+                if (!field.value.trim()) {
+                    error.classList.remove('hidden');
+                    field.classList.add('border-error-red');
+                    return false;
+                } else {
+                    error.classList.add('hidden');
+                    field.classList.remove('border-error-red');
+                    return true;
+                }
+            }
+
+            // Real-time validation
+            document.getElementById('username').addEventListener('blur', () => {
+                validateField('username', 'usernameError');
+            });
+
+            document.getElementById('password').addEventListener('blur', () => {
+                validateField('password', 'passwordError');
+            });
+
+            // Password visibility toggle
+            document.querySelector('.fa-eye').addEventListener('click', function() {
+                const passwordField = document.getElementById('password');
+                const isPassword = passwordField.type === 'password';
+                passwordField.type = isPassword ? 'text' : 'password';
+                this.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+            });
+
+        })();
+    </script>
+</body>
+</html>
